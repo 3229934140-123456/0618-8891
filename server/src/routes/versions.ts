@@ -31,9 +31,13 @@ function parseContentField(val: any): any {
 
 function getDocumentSnapshot(documentId: string): any {
   const modules = db.prepare('SELECT * FROM modules WHERE document_id = ? ORDER BY sort_order, id').all(documentId);
-  const endpoints = serializeEndpointList(
-    db.prepare('SELECT * FROM endpoints WHERE document_id = ?').all(documentId)
-  );
+  const endpointRows = db.prepare(`
+    SELECT e.* FROM endpoints e
+    INNER JOIN modules m ON e.module_id = m.id
+    WHERE m.document_id = ?
+    ORDER BY e.sort_order, e.id
+  `).all(documentId);
+  const endpoints = serializeEndpointList(endpointRows);
   return { modules, endpoints };
 }
 
@@ -182,38 +186,43 @@ router.get('/:documentId/diff', authMiddleware, (req: AuthRequest, res) => {
   const removedModules: any[] = [];
   const changedModules: any[] = [];
   for (const m of toContent.modules) {
-    if (!fromModMap.has(m.id)) addedModules.push({ id: m.id, title: m.title });
+    const modTitle = m.title || m.name;
+    if (!fromModMap.has(m.id)) addedModules.push({ id: m.id, title: modTitle });
     else {
       const prev = fromModMap.get(m.id) as any;
+      const prevTitle = prev.title || prev.name;
       const changes: string[] = [];
-      if (prev.title !== m.title) changes.push(`标题: "${prev.title}" → "${m.title}"`);
+      if (prevTitle !== modTitle) changes.push(`标题: "${prevTitle}" → "${modTitle}"`);
       if (prev.description !== m.description) changes.push('描述已更新');
-      if (changes.length > 0) changedModules.push({ id: m.id, title: m.title, changes });
+      if (changes.length > 0) changedModules.push({ id: m.id, title: modTitle, changes });
     }
   }
   for (const m of fromContent.modules) {
-    if (!toModMap.has(m.id)) removedModules.push({ id: m.id, title: m.title });
+    if (!toModMap.has(m.id)) removedModules.push({ id: m.id, title: m.title || m.name });
   }
 
   const addedEndpoints: any[] = [];
   const removedEndpoints: any[] = [];
   const changedEndpoints: any[] = [];
   for (const e of toContent.endpoints) {
+    const epTitle = e.title || e.name;
     if (!fromEpMap.has(e.id)) {
-      addedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: e.title });
+      addedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: epTitle });
     } else {
       const prev = fromEpMap.get(e.id) as any;
+      const prevTitle = prev.title || prev.name;
       const changes: string[] = [];
-      if (prev.title !== e.title) changes.push(`标题: "${prev.title}" → "${e.title}"`);
+      if (prevTitle !== epTitle) changes.push(`标题: "${prevTitle}" → "${epTitle}"`);
       if (prev.method !== e.method) changes.push(`方法: ${prev.method} → ${e.method}`);
       if (prev.path !== e.path) changes.push(`路径: ${prev.path} → ${e.path}`);
       if (JSON.stringify(prev.parameters || []) !== JSON.stringify(e.parameters || [])) changes.push('参数定义已更新');
+      if (JSON.stringify(prev.request_body || null) !== JSON.stringify(e.request_body || null)) changes.push('请求体结构已更新');
       if (JSON.stringify(prev.response_schema || {}) !== JSON.stringify(e.response_schema || {})) changes.push('响应结构已更新');
-      if (changes.length > 0) changedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: e.title, changes });
+      if (changes.length > 0) changedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: epTitle, changes });
     }
   }
   for (const e of fromContent.endpoints) {
-    if (!toEpMap.has(e.id)) removedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: e.title });
+    if (!toEpMap.has(e.id)) removedEndpoints.push({ id: e.id, method: e.method, path: e.path, title: e.title || e.name });
   }
 
   res.json({

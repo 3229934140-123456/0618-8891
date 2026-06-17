@@ -917,22 +917,25 @@ export default function DocumentEditor() {
               }
               return snapModules.map((mod: any) => {
                 const modEps = snapEndpoints.filter((e: any) => e.module_id === mod.id);
+                const modName = mod.name || mod.title;
                 return (
                   <div key={mod.id} style={{ marginBottom: 24 }}>
                     <Title level={5} style={{ marginBottom: 8 }}>
-                      📁 {mod.name}
+                      📁 {modName}
                       {mod.description && <Text type="secondary" style={{ fontWeight: 'normal', marginLeft: 8, fontSize: 13 }}>{mod.description}</Text>}
                     </Title>
                     {modEps.length === 0 ? (
                       <Paragraph type="secondary" style={{ paddingLeft: 24 }}>暂无接口</Paragraph>
                     ) : (
                       <div style={{ paddingLeft: 16 }}>
-                        {modEps.map((ep: any) => (
+                        {modEps.map((ep: any) => {
+                          const epName = ep.name || ep.title;
+                          return (
                           <div key={ep.id} style={{ marginBottom: 16, padding: '12px 16px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
                             <Space align="center" style={{ marginBottom: 8 }}>
                               <Tag color="blue">{ep.method}</Tag>
                               <Text code style={{ fontSize: 13 }}>{ep.path}</Text>
-                              <Text strong>{ep.name}</Text>
+                              <Text strong>{epName}</Text>
                             </Space>
                             {ep.description && <Paragraph type="secondary" style={{ marginBottom: 8, fontSize: 12 }}>{ep.description}</Paragraph>}
                             {ep.parameters && ep.parameters.length > 0 && (
@@ -975,7 +978,7 @@ export default function DocumentEditor() {
                               </div>
                             )}
                           </div>
-                        ))}
+                          );})}
                       </div>
                     )}
                   </div>
@@ -1026,12 +1029,14 @@ export default function DocumentEditor() {
                           bordered
                           dataSource={section.items}
                           locale={{ emptyText: '无' }}
-                          renderItem={(it: any) => (
+                          renderItem={(it: any) => {
+                            const displayTitle = it.title || it.name;
+                            return (
                             <List.Item>
                               <div style={{ width: '100%' }}>
                                 <Space>
                                   {it.method && <Tag color="blue">{it.method}</Tag>}
-                                  <Text strong>{it.title}</Text>
+                                  <Text strong>{displayTitle}</Text>
                                   {it.path && <Text code style={{ fontSize: 12 }}>{it.path}</Text>}
                                 </Space>
                                 {it.changes && Array.isArray(it.changes) && it.changes.length > 0 && (
@@ -1041,7 +1046,7 @@ export default function DocumentEditor() {
                                 )}
                               </div>
                             </List.Item>
-                          )}
+                            );}}
                         />
                       </div>
                     );

@@ -83,6 +83,16 @@
       "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
       "created_at": "2026-06-17T17:16:37.408Z",
       "updated_at": "2026-06-17T17:16:37.408Z"
+    },
+    {
+      "id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "title": "??????",
+      "description": "",
+      "base_url": "",
+      "visibility": "private",
+      "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
+      "created_at": "2026-06-17T17:33:11.935Z",
+      "updated_at": "2026-06-17T17:33:11.935Z"
     }
   ],
   "document_members": [
@@ -130,6 +140,15 @@
       "sort_order": 2,
       "created_at": "2026-06-17T17:17:45.481Z",
       "updated_at": "2026-06-17T17:17:45.481Z"
+    },
+    {
+      "id": "9a79ea3a-9b76-4e41-8e75-8b797f54318b",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "name": "????",
+      "description": "??????",
+      "sort_order": 0,
+      "created_at": "2026-06-17T17:33:12.257Z",
+      "updated_at": "2026-06-17T17:33:12.257Z"
     }
   ],
   "endpoints": [
@@ -148,6 +167,38 @@
       "sort_order": 0,
       "created_at": "2026-06-17T16:45:23.870Z",
       "updated_at": "2026-06-17T16:45:23.870Z"
+    },
+    {
+      "id": "96f02a0a-935d-4942-8c06-f472c7b4184a",
+      "module_id": "9a79ea3a-9b76-4e41-8e75-8b797f54318b",
+      "name": "??????",
+      "description": "",
+      "method": "GET",
+      "path": "/api/users/:id",
+      "parameters": "[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"number\",\"required\":true}]",
+      "request_body": "null",
+      "response_schema": "{\"properties\":{\"id\":{\"type\":\"number\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"}",
+      "request_examples": "{}",
+      "response_examples": "{\"default\":{\"id\":123,\"name\":\"??\"}}",
+      "sort_order": 0,
+      "created_at": "2026-06-17T17:33:12.573Z",
+      "updated_at": "2026-06-17T17:33:12.573Z"
+    },
+    {
+      "id": "c959efad-0861-4392-a35c-572fd62e5424",
+      "module_id": "9a79ea3a-9b76-4e41-8e75-8b797f54318b",
+      "name": "????",
+      "description": "",
+      "method": "POST",
+      "path": "/api/users",
+      "parameters": "[{\"description\":\"???\",\"name\":\"name\",\"in\":\"body\",\"type\":\"string\",\"required\":true}]",
+      "request_body": "null",
+      "response_schema": "null",
+      "request_examples": "{}",
+      "response_examples": "{}",
+      "sort_order": 1,
+      "created_at": "2026-06-17T17:33:12.924Z",
+      "updated_at": "2026-06-17T17:33:12.924Z"
     }
   ],
   "document_versions": [
@@ -204,6 +255,42 @@
       "change_summary": "新增模块「??C」",
       "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
       "created_at": "2026-06-17T17:17:45.483Z"
+    },
+    {
+      "id": "ab97f046-87d8-4cb8-afbf-c6772c5bfc79",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": 1,
+      "content": "{\"modules\":[],\"endpoints\":[{\"id\":\"3de4de35-a447-40ca-8c92-cddb05510e49\",\"module_id\":\"18734ddf-b154-49c7-a336-c35312e077f3\",\"name\":\"??????\",\"description\":\"????ID????\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"integer\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"integer\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"code\":0,\"data\":{\"id\":1,\"name\":\"??\"}}},\"sort_order\":0,\"created_at\":\"2026-06-17T16:45:23.870Z\",\"updated_at\":\"2026-06-17T16:45:23.870Z\"}]}",
+      "change_summary": "创建文档",
+      "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
+      "created_at": "2026-06-17T17:33:11.938Z"
+    },
+    {
+      "id": "39188805-eaad-4f6e-b649-5eed7e84670a",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": 2,
+      "content": "{\"modules\":[{\"id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"document_id\":\"5b09fe3a-5c25-4a58-b4c6-a87aca3323f6\",\"name\":\"????\",\"description\":\"??????\",\"sort_order\":0,\"created_at\":\"2026-06-17T17:33:12.257Z\",\"updated_at\":\"2026-06-17T17:33:12.257Z\"}],\"endpoints\":[{\"id\":\"3de4de35-a447-40ca-8c92-cddb05510e49\",\"module_id\":\"18734ddf-b154-49c7-a336-c35312e077f3\",\"name\":\"??????\",\"description\":\"????ID????\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"integer\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"integer\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"code\":0,\"data\":{\"id\":1,\"name\":\"??\"}}},\"sort_order\":0,\"created_at\":\"2026-06-17T16:45:23.870Z\",\"updated_at\":\"2026-06-17T16:45:23.870Z\"}]}",
+      "change_summary": "新增模块「????」",
+      "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
+      "created_at": "2026-06-17T17:33:12.259Z"
+    },
+    {
+      "id": "57224c02-e553-4768-a734-1a33c8e338fb",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": 3,
+      "content": "{\"modules\":[{\"id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"document_id\":\"5b09fe3a-5c25-4a58-b4c6-a87aca3323f6\",\"name\":\"????\",\"description\":\"??????\",\"sort_order\":0,\"created_at\":\"2026-06-17T17:33:12.257Z\",\"updated_at\":\"2026-06-17T17:33:12.257Z\"}],\"endpoints\":[{\"id\":\"3de4de35-a447-40ca-8c92-cddb05510e49\",\"module_id\":\"18734ddf-b154-49c7-a336-c35312e077f3\",\"name\":\"??????\",\"description\":\"????ID????\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"integer\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"integer\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"code\":0,\"data\":{\"id\":1,\"name\":\"??\"}}},\"sort_order\":0,\"created_at\":\"2026-06-17T16:45:23.870Z\",\"updated_at\":\"2026-06-17T16:45:23.870Z\"},{\"id\":\"96f02a0a-935d-4942-8c06-f472c7b4184a\",\"module_id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"name\":\"??????\",\"description\":\"\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"number\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"number\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"id\":123,\"name\":\"??\"}},\"sort_order\":0,\"created_at\":\"2026-06-17T17:33:12.573Z\",\"updated_at\":\"2026-06-17T17:33:12.573Z\"}]}",
+      "change_summary": "新增接口「??????」",
+      "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
+      "created_at": "2026-06-17T17:33:12.592Z"
+    },
+    {
+      "id": "c56d80a9-e1d8-4037-b177-369da3a97b50",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": 4,
+      "content": "{\"modules\":[{\"id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"document_id\":\"5b09fe3a-5c25-4a58-b4c6-a87aca3323f6\",\"name\":\"????\",\"description\":\"??????\",\"sort_order\":0,\"created_at\":\"2026-06-17T17:33:12.257Z\",\"updated_at\":\"2026-06-17T17:33:12.257Z\"}],\"endpoints\":[{\"id\":\"3de4de35-a447-40ca-8c92-cddb05510e49\",\"module_id\":\"18734ddf-b154-49c7-a336-c35312e077f3\",\"name\":\"??????\",\"description\":\"????ID????\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"integer\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"integer\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"code\":0,\"data\":{\"id\":1,\"name\":\"??\"}}},\"sort_order\":0,\"created_at\":\"2026-06-17T16:45:23.870Z\",\"updated_at\":\"2026-06-17T16:45:23.870Z\"},{\"id\":\"96f02a0a-935d-4942-8c06-f472c7b4184a\",\"module_id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"name\":\"??????\",\"description\":\"\",\"method\":\"GET\",\"path\":\"/api/users/:id\",\"parameters\":[{\"description\":\"??ID\",\"name\":\"id\",\"in\":\"path\",\"type\":\"number\",\"required\":true}],\"request_body\":null,\"response_schema\":{\"properties\":{\"id\":{\"type\":\"number\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"request_examples\":{},\"response_examples\":{\"default\":{\"id\":123,\"name\":\"??\"}},\"sort_order\":0,\"created_at\":\"2026-06-17T17:33:12.573Z\",\"updated_at\":\"2026-06-17T17:33:12.573Z\"},{\"id\":\"c959efad-0861-4392-a35c-572fd62e5424\",\"module_id\":\"9a79ea3a-9b76-4e41-8e75-8b797f54318b\",\"name\":\"????\",\"description\":\"\",\"method\":\"POST\",\"path\":\"/api/users\",\"parameters\":[{\"description\":\"???\",\"name\":\"name\",\"in\":\"body\",\"type\":\"string\",\"required\":true}],\"request_body\":null,\"response_schema\":null,\"request_examples\":{},\"response_examples\":{},\"sort_order\":1,\"created_at\":\"2026-06-17T17:33:12.924Z\",\"updated_at\":\"2026-06-17T17:33:12.924Z\"}]}",
+      "change_summary": "新增接口「????」",
+      "created_by": "6359b68f-13b7-4cc1-8dc3-b78d07640cdf",
+      "created_at": "2026-06-17T17:33:12.926Z"
     }
   ],
   "comments": [],
@@ -270,6 +357,34 @@
       "version": "1.0.3",
       "changes": "[\"新增模块「??C」\"]",
       "created_at": "2026-06-17T17:17:45.484Z"
+    },
+    {
+      "id": "8b566a1e-c904-446f-af3e-3f5568926449",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": "1.0.0",
+      "changes": "[\"创建文档\"]",
+      "created_at": "2026-06-17T17:33:11.939Z"
+    },
+    {
+      "id": "73ba7a38-1d5d-491a-94fb-7fe7ecda26d3",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": "1.0.1",
+      "changes": "[\"新增模块「????」\"]",
+      "created_at": "2026-06-17T17:33:12.260Z"
+    },
+    {
+      "id": "5d764af3-b584-416d-8583-2ee2b3663d55",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": "1.0.2",
+      "changes": "[\"新增接口「??????」 (GET /api/users/:id)\"]",
+      "created_at": "2026-06-17T17:33:12.592Z"
+    },
+    {
+      "id": "611b2a5d-3914-4a23-bdee-ebd92391fca3",
+      "document_id": "5b09fe3a-5c25-4a58-b4c6-a87aca3323f6",
+      "version": "1.0.3",
+      "changes": "[\"新增接口「????」 (POST /api/users)\"]",
+      "created_at": "2026-06-17T17:33:12.927Z"
     }
   ],
   "subscriptions": [
