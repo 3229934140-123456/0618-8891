@@ -58,6 +58,9 @@ export const db = {
     const data = loadDB();
     return {
       get(...args: any[]): any {
+        if (isAggregateQuery(sql)) {
+          return executeAggregate(sql, args, data);
+        }
         const table = matchTable(sql);
         if (!table) return undefined;
         const wheres = parseWhere(sql, args);
@@ -72,7 +75,10 @@ export const db = {
           const table = matchTable(sql);
           if (!table) return [];
           const wheres = parseWhere(sql, args);
-          result = ((data as any)[table] || []).filter((row: any) => matchWheres(row, wheres));
+          result = ((data as any)[table] || []);
+          if (Object.keys(wheres).length > 0) {
+            result = result.filter((row: any) => matchWheres(row, wheres));
+          }
         }
         if (sql.includes('ORDER BY')) {
           result = handleOrderBy(sql, result);
@@ -85,6 +91,12 @@ export const db = {
             seen.add(key);
             return true;
           });
+        }
+        if (sql.includes('LIMIT')) {
+          const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
+          if (limitMatch) {
+            result = result.slice(0, parseInt(limitMatch[1]));
+          }
         }
         return result;
       },
@@ -285,4 +297,67 @@ function handleJoin(sql: string, args: any[], data: DBData): any[] {
 
 export function initDatabase() {
   loadDB();
+}
+
+function isAggregateQuery(sql: string): boolean {
+  return /SELECT\s+(MAX|MIN|COUNT|SUM|AVG|COALESCE)\s*\(/i.test(sql);
+}
+
+function executeAggregate(sql: string, args: any[], data: DBData): any {
+  const table = matchTable(sql);
+  if (!table) return {};
+  const wheres = parseWhere(sql, args);
+  const list = ((data as any)[table] || []).filter((row: any) => matchWheres(row, wheres));
+
+  const result: any = {};
+
+  const maxMatch = sql.match(/MAX\s*\(\s*([\w.]+)\s*\)\s*(?:AS\s+(\w+))?/i);
+  if (maxMatch) {
+    const col = maxMatch[1].split('.').pop() || '';
+    const alias = maxMatch[2] || 'max';
+    let maxVal: any = null;
+    for (const row of list) {
+      if (row[col] !== undefined && (maxVal === null || row[col] > maxVal)) {
+        maxVal = row[col];
+      }
+    }
+    result[alias] = maxVal;
+  }
+
+  const minMatch = sql.match(/MIN\s*\(\s*([\w.]+)\s*\)\s*(?:AS\s+(\w+))?/i);
+  if (minMatch) {
+    const col = minMatch[1].split('.').pop() || '';
+    const alias = minMatch[2] || 'min';
+    let minVal: any = null;
+    for (const row of list) {
+      if (row[col] !== undefined && (minVal === null || row[col] < minVal)) {
+        minVal = row[col];
+      }
+    }
+    result[alias] = minVal;
+  }
+
+  const countMatch = sql.match(/COUNT\s*\(\s*([\w.*]+)\s*\)\s*(?:AS\s+(\w+))?/i);
+  if (countMatch) {
+    const alias = countMatch[2] || 'c';
+    result[alias] = list.length;
+  }
+
+  if (/COALESCE\s*\(\s*MAX/i.test(sql)) {
+    const colMatch = sql.match(/COALESCE\s*\(\s*MAX\s*\(\s*([\w.]+)\s*\)\s*,\s*([-\d.]+)\s*\)\s*AS\s+(\w+)/i);
+    if (colMatch) {
+      const col = colMatch[1].split('.').pop() || '';
+      const fallback = isNaN(Number(colMatch[2])) ? colMatch[2] : Number(colMatch[2]);
+      const alias = colMatch[3] || 'max';
+      let maxVal: any = null;
+      for (const row of list) {
+        if (row[col] !== undefined && (maxVal === null || row[col] > maxVal)) {
+          maxVal = row[col];
+        }
+      }
+      result[alias] = maxVal !== null ? maxVal : fallback;
+    }
+  }
+
+  return result;
 }
