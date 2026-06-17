@@ -898,7 +898,7 @@ export default function DocumentEditor() {
         </div>
       </Modal>
 
-      <Modal title={`版本快照 - v${versionDetail?.version || ''}`} open={versionDetailOpen} onCancel={() => setVersionDetailOpen(false)} footer={null} width={780}>
+      <Modal title={`版本快照 - v${versionDetail?.version || ''}`} open={versionDetailOpen} onCancel={() => setVersionDetailOpen(false)} footer={null} width={860}>
         {versionDetail ? (
           <div>
             <Space style={{ marginBottom: 16 }}>
@@ -909,53 +909,86 @@ export default function DocumentEditor() {
               <Paragraph type="secondary">说明：{versionDetail.change_summary}</Paragraph>
             )}
             <Divider />
-            <Tabs
-              items={[
-                {
-                  key: 'modules',
-                  label: `模块 (${versionDetail.content?.modules?.length || 0})`,
-                  children: (
-                    <Table
-                      size="small"
-                      rowKey="id"
-                      dataSource={versionDetail.content?.modules || []}
-                      pagination={false}
-                      locale={{ emptyText: '无模块' }}
-                      columns={[
-                        { title: '模块名称', dataIndex: 'name', key: 'name' },
-                        { title: '描述', dataIndex: 'description', key: 'description' },
-                        { title: '排序', dataIndex: 'sort_order', key: 'sort_order', width: 80 },
-                      ]}
-                    />
-                  ),
-                },
-                {
-                  key: 'endpoints',
-                  label: `接口 (${versionDetail.content?.endpoints?.length || 0})`,
-                  children: (
-                    <Table
-                      size="small"
-                      rowKey="id"
-                      dataSource={versionDetail.content?.endpoints || []}
-                      pagination={false}
-                      locale={{ emptyText: '无接口' }}
-                      columns={[
-                        { title: '方法', dataIndex: 'method', key: 'method', width: 80, render: (m: string) => <Tag color="blue">{m}</Tag> },
-                        { title: '路径', dataIndex: 'path', key: 'path' },
-                        { title: '名称', dataIndex: 'name', key: 'name' },
-                      ]}
-                    />
-                  ),
-                },
-              ]}
-            />
+            {(() => {
+              const snapModules = versionDetail.content?.modules || [];
+              const snapEndpoints = versionDetail.content?.endpoints || [];
+              if (snapModules.length === 0 && snapEndpoints.length === 0) {
+                return <Paragraph type="secondary">此版本无模块和接口</Paragraph>;
+              }
+              return snapModules.map((mod: any) => {
+                const modEps = snapEndpoints.filter((e: any) => e.module_id === mod.id);
+                return (
+                  <div key={mod.id} style={{ marginBottom: 24 }}>
+                    <Title level={5} style={{ marginBottom: 8 }}>
+                      📁 {mod.name}
+                      {mod.description && <Text type="secondary" style={{ fontWeight: 'normal', marginLeft: 8, fontSize: 13 }}>{mod.description}</Text>}
+                    </Title>
+                    {modEps.length === 0 ? (
+                      <Paragraph type="secondary" style={{ paddingLeft: 24 }}>暂无接口</Paragraph>
+                    ) : (
+                      <div style={{ paddingLeft: 16 }}>
+                        {modEps.map((ep: any) => (
+                          <div key={ep.id} style={{ marginBottom: 16, padding: '12px 16px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+                            <Space align="center" style={{ marginBottom: 8 }}>
+                              <Tag color="blue">{ep.method}</Tag>
+                              <Text code style={{ fontSize: 13 }}>{ep.path}</Text>
+                              <Text strong>{ep.name}</Text>
+                            </Space>
+                            {ep.description && <Paragraph type="secondary" style={{ marginBottom: 8, fontSize: 12 }}>{ep.description}</Paragraph>}
+                            {ep.parameters && ep.parameters.length > 0 && (
+                              <div style={{ marginBottom: 8 }}>
+                                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>参数：</Text>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                  <thead>
+                                    <tr style={{ background: '#f5f5f5' }}>
+                                      <th style={{ padding: '4px 8px', border: '1px solid #e8e8e8', textAlign: 'left' }}>名称</th>
+                                      <th style={{ padding: '4px 8px', border: '1px solid #e8e8e8', textAlign: 'left' }}>位置</th>
+                                      <th style={{ padding: '4px 8px', border: '1px solid #e8e8e8', textAlign: 'left' }}>类型</th>
+                                      <th style={{ padding: '4px 8px', border: '1px solid #e8e8e8', textAlign: 'left' }}>必填</th>
+                                      <th style={{ padding: '4px 8px', border: '1px solid #e8e8e8', textAlign: 'left' }}>说明</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {ep.parameters.map((p: any, pi: number) => (
+                                      <tr key={pi}>
+                                        <td style={{ padding: '4px 8px', border: '1px solid #e8e8e8' }}><Text code style={{ fontSize: 11 }}>{p.name}</Text></td>
+                                        <td style={{ padding: '4px 8px', border: '1px solid #e8e8e8' }}>{p.in}</td>
+                                        <td style={{ padding: '4px 8px', border: '1px solid #e8e8e8' }}>{p.type}</td>
+                                        <td style={{ padding: '4px 8px', border: '1px solid #e8e8e8' }}>{p.required ? '是' : '否'}</td>
+                                        <td style={{ padding: '4px 8px', border: '1px solid #e8e8e8' }}>{p.description}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                            {ep.response_schema && (
+                              <div style={{ marginBottom: 4 }}>
+                                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>响应结构：</Text>
+                                <pre style={{ fontSize: 11, background: '#fff', padding: 8, borderRadius: 4, border: '1px solid #e8e8e8', maxHeight: 120, overflow: 'auto' }}>{JSON.stringify(ep.response_schema, null, 2)}</pre>
+                              </div>
+                            )}
+                            {ep.response_examples?.default && (
+                              <div>
+                                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>响应示例：</Text>
+                                <pre style={{ fontSize: 11, background: '#fff', padding: 8, borderRadius: 4, border: '1px solid #e8e8e8', maxHeight: 120, overflow: 'auto' }}>{JSON.stringify(ep.response_examples.default, null, 2)}</pre>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         ) : (
           <div>加载中...</div>
         )}
       </Modal>
 
-      <Modal title="版本对比" open={diffOpen} onCancel={() => setDiffOpen(false)} footer={null} width={780}>
+      <Modal title="版本对比" open={diffOpen} onCancel={() => setDiffOpen(false)} footer={null} width={860}>
         {diffData ? (
           <div>
             <Space style={{ marginBottom: 16 }}>
@@ -969,46 +1002,51 @@ export default function DocumentEditor() {
             </Space>
             {diffData.diff && (
               <div>
-                {(['addedModules', 'removedModules', 'changedModules', 'addedEndpoints', 'removedEndpoints', 'changedEndpoints'] as const).map((k) => {
-                  const items = diffData.diff[k] || [];
-                  if (!items.length) return null;
-                  const labelMap: Record<string, string> = {
-                    addedModules: '新增模块', removedModules: '删除模块', changedModules: '变更模块',
-                    addedEndpoints: '新增接口', removedEndpoints: '删除接口', changedEndpoints: '变更接口',
-                  };
-                  const colorMap: Record<string, string> = {
-                    addedModules: 'green', removedModules: 'red', changedModules: 'orange',
-                    addedEndpoints: 'green', removedEndpoints: 'red', changedEndpoints: 'orange',
-                  };
-                  return (
-                    <div key={k} style={{ marginBottom: 16 }}>
-                      <Title level={5}>
-                        <Tag color={colorMap[k]}>{labelMap[k]}</Tag>
-                        <Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>共 {items.length} 项</Text>
-                      </Title>
-                      <List
-                        size="small"
-                        bordered
-                        dataSource={items}
-                        locale={{ emptyText: '无' }}
-                        renderItem={(it: any) => (
-                          <List.Item>
-                            {it.method && <Tag style={{ marginRight: 8 }}>{it.method}</Tag>}
-                            <Text strong>{it.path || it.title}{it.title && it.path && <> ({it.title})</>}</Text>
-                            {it.changes && Array.isArray(it.changes) && (
-                              <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
-                                {it.changes.map((c: string, i: number) => <li key={i} style={{ fontSize: 12, color: '#666' }}>{c}</li>)}
-                              </ul>
-                            )}
-                          </List.Item>
-                        )}
-                      />
-                    </div>
-                  );
-                })}
-                {!['addedModules', 'removedModules', 'changedModules', 'addedEndpoints', 'removedEndpoints', 'changedEndpoints'].some((k) => (diffData.diff[k] || []).length) && (
-                  <Paragraph type="secondary" style={{ textAlign: 'center', padding: 24 }}>无差异</Paragraph>
-                )}
+                {(() => {
+                  const sections = [
+                    { key: 'addedModules', label: '新增模块', color: 'green', items: diffData.diff.addedModules || [] },
+                    { key: 'addedEndpoints', label: '新增接口', color: 'green', items: diffData.diff.addedEndpoints || [] },
+                    { key: 'changedModules', label: '变更模块', color: 'orange', items: diffData.diff.changedModules || [] },
+                    { key: 'changedEndpoints', label: '变更接口', color: 'orange', items: diffData.diff.changedEndpoints || [] },
+                    { key: 'removedModules', label: '删除模块', color: 'red', items: diffData.diff.removedModules || [] },
+                    { key: 'removedEndpoints', label: '删除接口', color: 'red', items: diffData.diff.removedEndpoints || [] },
+                  ];
+                  const hasAny = sections.some((s) => s.items.length > 0);
+                  if (!hasAny) return <Paragraph type="secondary" style={{ textAlign: 'center', padding: 24 }}>无差异</Paragraph>;
+                  return sections.map((section) => {
+                    if (!section.items.length) return null;
+                    return (
+                      <div key={section.key} style={{ marginBottom: 20 }}>
+                        <Title level={5}>
+                          <Tag color={section.color}>{section.label}</Tag>
+                          <Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>共 {section.items.length} 项</Text>
+                        </Title>
+                        <List
+                          size="small"
+                          bordered
+                          dataSource={section.items}
+                          locale={{ emptyText: '无' }}
+                          renderItem={(it: any) => (
+                            <List.Item>
+                              <div style={{ width: '100%' }}>
+                                <Space>
+                                  {it.method && <Tag color="blue">{it.method}</Tag>}
+                                  <Text strong>{it.title}</Text>
+                                  {it.path && <Text code style={{ fontSize: 12 }}>{it.path}</Text>}
+                                </Space>
+                                {it.changes && Array.isArray(it.changes) && it.changes.length > 0 && (
+                                  <ul style={{ margin: '4px 0 0 20px', padding: 0, listStyle: 'disc' }}>
+                                    {it.changes.map((c: string, i: number) => <li key={i} style={{ fontSize: 12, color: '#666', lineHeight: '20px' }}>{c}</li>)}
+                                  </ul>
+                                )}
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>

@@ -34,6 +34,13 @@
       "password_hash": "$2a$10$SasAYttIkARI9E2IWrUeNeUVJSn1UEWsah2LbDEDiDDMpLnaXbcpe",
       "name": "??A",
       "created_at": "2026-06-17T17:16:37.393Z"
+    },
+    {
+      "id": "ba6e2a40-ef48-4837-84e5-349e7f95db34",
+      "email": "u2@t.com",
+      "password_hash": "$2a$10$7sU5iSQ2ssvifXmkKolhnuj/76BmqO.5ngKEw9RJcAeBa9tDZrffy",
+      "name": "??B",
+      "created_at": "2026-06-17T17:25:37.212Z"
     }
   ],
   "documents": [
@@ -78,7 +85,15 @@
       "updated_at": "2026-06-17T17:16:37.408Z"
     }
   ],
-  "document_members": [],
+  "document_members": [
+    {
+      "id": "4fed3912-baab-4180-810b-d8cdb8902a6b",
+      "document_id": "7d18b677-1353-4d4c-9557-6fdf1bb2056f",
+      "user_id": "ba6e2a40-ef48-4837-84e5-349e7f95db34",
+      "role": "editor",
+      "created_at": "2026-06-17T17:25:37.409Z"
+    }
+  ],
   "modules": [
     {
       "id": "18734ddf-b154-49c7-a336-c35312e077f3",

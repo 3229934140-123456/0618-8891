@@ -342,11 +342,10 @@ router.post('/:documentId/subscriptions/:id/test', authMiddleware, async (req: A
 });
 
 router.get('/:documentId/collaborators', authMiddleware, (req: AuthRequest, res) => {
-  if (!checkDocumentAccess(req.params.documentId, req.user!.id, true)) {
-    const doc = db.prepare('SELECT created_by FROM documents WHERE id = ?').get(req.params.documentId) as any;
-    if (!doc || doc.created_by !== req.user?.id) {
-      return res.status(403).json({ error: '无权限管理' });
-    }
+  const doc = db.prepare('SELECT created_by FROM documents WHERE id = ?').get(req.params.documentId) as any;
+  if (!doc) return res.status(404).json({ error: '文档不存在' });
+  if (doc.created_by !== req.user?.id) {
+    return res.status(403).json({ error: '只有创建者可以管理协作者' });
   }
   const members = db.prepare(`
     SELECT dm.*, u.name as user_name, u.email as user_email
