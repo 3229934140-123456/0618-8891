@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import { db } from '../db';
 import { authMiddleware, checkDocumentAccess, AuthRequest } from '../auth';
-import { serializeEndpoint, parseJsonField } from '../utils';
+import { serializeEndpoint } from '../utils';
+import { saveVersion, addChangelog } from './versions';
 
 const router = Router();
 
@@ -15,60 +16,15 @@ function getDocIdOfEndpoint(epId: string): string | null {
   return rows[0]?.document_id || null;
 }
 
-function addChangelog(docId: string, changes: string[]) {
-  try {
-    const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
-    let version = '1.0.0';
-    if (logs.length > 0) {
-      const lastVer = logs[0].version.split('.').map(Number);
-      lastVer[2] = (lastVer[2] || 0) + 1;
-      version = lastVer.join('.');
-    }
-    const id = uuid();
-    db.prepare(`INSERT INTO changelogs (id, document_id, version, changes) VALUES (?, ?, ?, ?)`)
-      .run(id, docId, version, JSON.stringify(changes));
-    notifySubscribers(docId, version, changes);
-  } catch (e) {
-    console.error('changelog error:', e);
-  }
+function getNextVersion(docId: string): string {
+  const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
+  if (logs.length === 0) return '1.0.0';
+  const parts = (logs[0].version || '1.0.0').split('.').map(Number);
+  parts[2] = (parts[2] || 0) + 1;
+  return parts.join('.');
 }
 
-function saveVersion(docId: string, userId: string, summary: string) {
-  try {
-    const modules = db.prepare('SELECT * FROM modules WHERE document_id = ? ORDER BY sort_order').all(docId);
-    const endpoints = db.prepare(`
-      SELECT e.* FROM endpoints e
-      INNER JOIN modules m ON e.module_id = m.id
-      WHERE m.document_id = ?
-    `).all(docId);
-    const maxVer = db.prepare('SELECT MAX(version) as max FROM document_versions WHERE document_id = ?').get(docId) as any;
-    const version = (maxVer?.max || 0) + 1;
-    const id = uuid();
-    db.prepare(`
-      INSERT INTO document_versions (id, document_id, version, content, change_summary, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, docId, version, JSON.stringify({ modules, endpoints }), summary, userId);
-  } catch (e) {
-    console.error('version error:', e);
-  }
-}
-
-function notifySubscribers(docId: string, version: string, changes: string[]) {
-  try {
-    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(docId) as any;
-    const subs = db.prepare('SELECT email FROM subscriptions WHERE document_id = ?').all(docId) as any[];
-    if (subs.length === 0 || !doc) return;
-    const subject = `【文档更新】${doc.title} v${version}`;
-    subs.forEach((s) => {
-      console.log(`[邮件通知] To: ${s.email}, Subject: ${subject}`);
-      console.log(`  变更内容: ${changes.join(', ')}`);
-    });
-  } catch (e) {
-    console.error('notify error:', e);
-  }
-}
-
-router.post('/modules/:moduleId/endpoints', authMiddleware, (req: AuthRequest, res) => {
+router.post('/modules/:moduleId/endpoints', authMiddleware, async (req: AuthRequest, res) => {
   const mod = db.prepare('SELECT document_id FROM modules WHERE id = ?').get(req.params.moduleId) as any;
   if (!mod) return res.status(404).json({ error: '模块不存在' });
   if (!checkDocumentAccess(mod.document_id, req.user!.id, true)) {
@@ -92,14 +48,15 @@ router.post('/modules/:moduleId/endpoints', authMiddleware, (req: AuthRequest, r
     (maxSort.max || 0) + 1
   );
 
-  addChangelog(mod.document_id, [`新增接口「${name}」 (${method} ${path})`]);
+  const version = getNextVersion(mod.document_id);
   saveVersion(mod.document_id, req.user!.id, `新增接口「${name}」`);
+  await addChangelog(mod.document_id, req.user!.id, version, [`新增接口「${name}」 (${method} ${path})`]);
 
   const ep = db.prepare('SELECT * FROM endpoints WHERE id = ?').get(id);
   res.json(serializeEndpoint(ep));
 });
 
-router.put('/endpoints/:id', authMiddleware, (req: AuthRequest, res) => {
+router.put('/endpoints/:id', authMiddleware, async (req: AuthRequest, res) => {
   const docId = getDocIdOfEndpoint(req.params.id);
   if (!docId) return res.status(404).json({ error: '接口不存在' });
   if (!checkDocumentAccess(docId, req.user!.id, true)) {
@@ -129,14 +86,15 @@ router.put('/endpoints/:id', authMiddleware, (req: AuthRequest, res) => {
   if (JSON.stringify(oldEp.parameters) !== JSON.stringify(parameters)) changes.push(`更新接口「${name}」参数`);
   if (changes.length === 0) changes.push(`更新接口「${name}」`);
 
-  addChangelog(docId, changes);
+  const version = getNextVersion(docId);
+  addChangelog(docId, req.user!.id, version, changes);
   saveVersion(docId, req.user!.id, changes.join('；'));
 
   const updated = db.prepare('SELECT * FROM endpoints WHERE id = ?').get(req.params.id);
   res.json(serializeEndpoint(updated));
 });
 
-router.delete('/endpoints/:id', authMiddleware, (req: AuthRequest, res) => {
+router.delete('/endpoints/:id', authMiddleware, async (req: AuthRequest, res) => {
   const docId = getDocIdOfEndpoint(req.params.id);
   if (!docId) return res.status(404).json({ error: '接口不存在' });
   if (!checkDocumentAccess(docId, req.user!.id, true)) {
@@ -145,7 +103,8 @@ router.delete('/endpoints/:id', authMiddleware, (req: AuthRequest, res) => {
   const oldEp = serializeEndpoint(db.prepare('SELECT * FROM endpoints WHERE id = ?').get(req.params.id));
   db.prepare('DELETE FROM endpoints WHERE id = ?').run(req.params.id);
 
-  addChangelog(docId, [`删除接口「${oldEp.name}」`]);
+  const version = getNextVersion(docId);
+  addChangelog(docId, req.user!.id, version, [`删除接口「${oldEp.name}」`]);
   saveVersion(docId, req.user!.id, `删除接口「${oldEp.name}」`);
 
   res.json({ success: true });

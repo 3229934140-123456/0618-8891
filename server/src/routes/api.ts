@@ -3,8 +3,17 @@ import { db } from '../db';
 import { authMiddleware, optionalAuth, checkDocumentAccess, AuthRequest } from '../auth';
 import { v4 as uuid } from 'uuid';
 import YAML from 'yaml';
+import { saveVersion, addChangelog } from './versions';
 
 const router = Router();
+
+function getNextVersion(docId: string): string {
+  const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
+  if (logs.length === 0) return '1.0.0';
+  const parts = (logs[0].version || '1.0.0').split('.').map(Number);
+  parts[2] = (parts[2] || 0) + 1;
+  return parts.join('.');
+}
 
 router.post('/proxy', async (req, res) => {
   try {
@@ -136,50 +145,14 @@ router.post('/:documentId/import-openapi', authMiddleware, async (req: AuthReque
     }, 0);
 
     const changes = [`从 OpenAPI 规范导入：${moduleCount} 个模块，${endpointCount} 个接口`];
-    addChangelog(req.params.documentId, changes);
+    const version = getNextVersion(req.params.documentId);
     saveVersion(req.params.documentId, req.user!.id, changes[0]);
+    await addChangelog(req.params.documentId, req.user!.id, version, changes);
 
     res.json({ success: true, imported_modules: moduleCount, imported_endpoints: endpointCount });
   } catch (e: any) {
     res.status(400).json({ error: '解析失败: ' + e.message });
   }
 });
-
-function addChangelog(docId: string, changes: string[]) {
-  try {
-    const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
-    let version = '1.0.0';
-    if (logs.length > 0) {
-      const lastVer = logs[0].version.split('.').map(Number);
-      lastVer[2] = (lastVer[2] || 0) + 1;
-      version = lastVer.join('.');
-    }
-    const id = uuid();
-    db.prepare(`INSERT INTO changelogs (id, document_id, version, changes) VALUES (?, ?, ?, ?)`)
-      .run(id, docId, version, JSON.stringify(changes));
-  } catch (e) {
-    console.error('changelog error:', e);
-  }
-}
-
-function saveVersion(docId: string, userId: string, summary: string) {
-  try {
-    const modules = db.prepare('SELECT * FROM modules WHERE document_id = ? ORDER BY sort_order').all(docId);
-    const endpoints = db.prepare(`
-      SELECT e.* FROM endpoints e
-      INNER JOIN modules m ON e.module_id = m.id
-      WHERE m.document_id = ?
-    `).all(docId);
-    const maxRow = db.prepare('SELECT version FROM document_versions WHERE document_id = ? ORDER BY version DESC LIMIT 1').get(docId) as any;
-    const version = (maxRow?.version || 0) + 1;
-    const id = uuid();
-    db.prepare(`
-      INSERT INTO document_versions (id, document_id, version, content, change_summary, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, docId, version, JSON.stringify({ modules, endpoints }), summary, userId);
-  } catch (e) {
-    console.error('version error:', e);
-  }
-}
 
 export default router;

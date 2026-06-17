@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Layout, Typography, Space, Button, Tabs, Tag, Tooltip, Modal, Form, Input, Select, App, Divider, List, InputNumber, Switch } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CommentOutlined, HistoryOutlined, SendOutlined, SettingOutlined, GlobalOutlined, ShareAltOutlined, UploadOutlined } from '@ant-design/icons';
+import { Layout, Typography, Space, Button, Tabs, Tag, Tooltip, Modal, Form, Input, Select, App, Divider, List, InputNumber, Switch, Table, Radio } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CommentOutlined, HistoryOutlined, SendOutlined, SettingOutlined, GlobalOutlined, ShareAltOutlined, UploadOutlined, TeamOutlined, MailOutlined, EyeOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useParams } from 'react-router-dom';
 import { docApi, moduleApi, endpointApi, commentApi, versionApi, toolApi } from '../api';
 import type { Document, Module, Endpoint, Parameter, Comment as CommentType } from '../types';
@@ -36,6 +36,18 @@ export default function DocumentEditor() {
   const [changelogs, setChangelogs] = useState<any[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [subscribeFrequency, setSubscribeFrequency] = useState('instant');
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [collaboratorOpen, setCollaboratorOpen] = useState(false);
+  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<{ canView: boolean; canEdit: boolean; isOwner: boolean; visibility: string } | null>(null);
+  const [versionDetailOpen, setVersionDetailOpen] = useState(false);
+  const [versionDetail, setVersionDetail] = useState<any>(null);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffData, setDiffData] = useState<any>(null);
+  const [diffFrom, setDiffFrom] = useState<string>('');
+  const [diffTo, setDiffTo] = useState<string>('');
   const [moduleForm] = Form.useForm();
   const [endpointForm] = Form.useForm();
   const [settingsForm] = Form.useForm();
@@ -45,10 +57,14 @@ export default function DocumentEditor() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await docApi.get(id!);
+      const [data, perm] = await Promise.all([
+        docApi.get(id!),
+        versionApi.permissions(id!).catch(() => ({ canView: true, canEdit: false, isOwner: false, visibility: 'private' })),
+      ]);
       setDoc(data);
       setModules(data.modules || []);
       setEndpoints(data.endpoints || []);
+      setPermissions(perm);
     } finally {
       setLoading(false);
     }
@@ -225,11 +241,112 @@ export default function DocumentEditor() {
       return;
     }
     try {
-      await versionApi.subscribe(id!, subscribeEmail);
+      await versionApi.subscribe(id!, subscribeEmail, subscribeFrequency);
       message.success('订阅成功，文档更新时将收到通知');
       setSubscribeEmail('');
+      setSubscribeFrequency('instant');
+      loadSubscriptions();
     } catch (e: any) {
       message.error(e.response?.data?.error || '订阅失败');
+    }
+  };
+
+  const loadSubscriptions = async () => {
+    try {
+      const list = await versionApi.subscriptionList(id!);
+      setSubscriptions(list);
+      setSubscriptionOpen(true);
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '加载失败');
+    }
+  };
+
+  const handleDeleteSubscription = async (subId: string) => {
+    try {
+      await versionApi.subscriptionDelete(id!, subId);
+      message.success('已取消订阅');
+      loadSubscriptions();
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleUpdateSubscriptionFreq = async (subId: string, freq: string) => {
+    try {
+      await versionApi.subscriptionUpdate(id!, subId, freq);
+      message.success('已更新通知频率');
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleTestEmail = async (subId: string) => {
+    try {
+      const r = await versionApi.subscriptionTest(id!, subId);
+      if (r.success) message.success('测试邮件已发送');
+      else message.error('发送失败，请检查服务端日志');
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '发送失败');
+    }
+  };
+
+  const loadCollaborators = async () => {
+    try {
+      const list = await versionApi.collaboratorList(id!);
+      setCollaborators(list);
+      setCollaboratorOpen(true);
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '加载失败');
+    }
+  };
+
+  const handleAddCollaborator = async (values: { email: string; role: string }) => {
+    try {
+      await versionApi.collaboratorAdd(id!, values.email, values.role);
+      message.success('已邀请');
+      loadCollaborators();
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleUpdateCollaborator = async (collabId: string, role: string) => {
+    try {
+      await versionApi.collaboratorUpdate(id!, collabId, role);
+      message.success('权限已更新');
+      loadCollaborators();
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleDeleteCollaborator = async (collabId: string) => {
+    try {
+      await versionApi.collaboratorDelete(id!, collabId);
+      message.success('已移除');
+      loadCollaborators();
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '操作失败');
+    }
+  };
+
+  const viewVersionDetail = async (v: any) => {
+    try {
+      const data = await versionApi.detail(id!, String(v.version));
+      setVersionDetail(data);
+      setVersionDetailOpen(true);
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '加载失败');
+    }
+  };
+
+  const loadDiff = async (from?: string, to?: string) => {
+    try {
+      const data = await versionApi.diff(id!, from, to);
+      setDiffData(data);
+      setDiffOpen(true);
+    } catch (e: any) {
+      message.error(e.response?.data?.error || '加载失败');
     }
   };
 
@@ -439,12 +556,21 @@ export default function DocumentEditor() {
         <div style={{ position: 'sticky', top: -32, background: '#fff', zIndex: 10, paddingTop: 32, marginBottom: 16 }}>
           <Space style={{ position: 'absolute', right: 0, top: 32 }}>
             <Button icon={<HistoryOutlined />} onClick={loadVersions}>版本历史</Button>
+            <Button icon={<BarChartOutlined />} onClick={() => loadDiff()}>版本对比</Button>
             <Button icon={<CommentOutlined />} onClick={() => openComments('document', doc.id, doc.title)}>文档评论</Button>
             <Button icon={<GlobalOutlined />} onClick={loadChangelogs}>Changelog</Button>
+            {permissions?.isOwner && (
+              <Button icon={<MailOutlined />} onClick={loadSubscriptions}>订阅管理</Button>
+            )}
+            {permissions?.isOwner && (
+              <Button icon={<TeamOutlined />} onClick={loadCollaborators}>协作者</Button>
+            )}
             <Button icon={<ShareAltOutlined />} onClick={() => setShareOpen(true)}>发布/分享</Button>
-            <Button type="primary" icon={<SettingOutlined />} onClick={() => { settingsForm.setFieldsValue(doc); setSettingsOpen(true); }}>
-              文档设置
-            </Button>
+            {permissions?.canEdit && (
+              <Button type="primary" icon={<SettingOutlined />} onClick={() => { settingsForm.setFieldsValue(doc); setSettingsOpen(true); }}>
+                文档设置
+              </Button>
+            )}
           </Space>
         </div>
         {content}
@@ -558,12 +684,39 @@ export default function DocumentEditor() {
         </Form>
       </Modal>
 
-      <Modal title="版本历史" open={versionOpen} onCancel={() => setVersionOpen(false)} footer={null} width={600}>
+      <Modal title="版本历史" open={versionOpen} onCancel={() => setVersionOpen(false)} footer={null} width={700}>
+        <div style={{ marginBottom: 16 }}>
+          <Space>
+            <Select
+              style={{ width: 180 }}
+              placeholder="对比版本 A"
+              allowClear
+              value={diffFrom || undefined}
+              onChange={setDiffFrom}
+              options={versions.map((v) => ({ value: String(v.version), label: `v${v.version} ${v.change_summary?.slice(0, 15) || ''}` }))}
+            />
+            <span>→</span>
+            <Select
+              style={{ width: 180 }}
+              placeholder="对比版本 B"
+              allowClear
+              value={diffTo || undefined}
+              onChange={setDiffTo}
+              options={versions.map((v) => ({ value: String(v.version), label: `v${v.version} ${v.change_summary?.slice(0, 15) || ''}` }))}
+            />
+            <Button type="primary" onClick={() => loadDiff(diffFrom, diffTo)} disabled={!diffFrom && !diffTo}>对比</Button>
+          </Space>
+        </div>
         <List
           dataSource={versions}
           locale={{ emptyText: '暂无版本记录' }}
           renderItem={(v) => (
-            <List.Item>
+            <List.Item
+              actions={[
+                <Button type="link" size="small" icon={<EyeOutlined />} key="view" onClick={() => viewVersionDetail(v)}>查看快照</Button>,
+                <Button type="link" size="small" key="diff" onClick={() => { setDiffFrom(String(v.version)); loadDiff(String(v.version), undefined); }}>与当前对比</Button>,
+              ]}
+            >
               <List.Item.Meta
                 title={<Space>v{v.version} <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(v.created_at).format('YYYY-MM-DD HH:mm')}</Text></Space>}
                 description={<Space>{v.user?.name}：{v.change_summary || '无说明'}</Space>}
@@ -595,7 +748,7 @@ export default function DocumentEditor() {
         <ChangelogForm docId={id!} onAdded={() => loadChangelogs()} />
       </Modal>
 
-      <Modal title="发布与订阅" open={shareOpen} onCancel={() => setShareOpen(false)} footer={null} width={520}>
+      <Modal title="发布与订阅" open={shareOpen} onCancel={() => setShareOpen(false)} footer={null} width={560}>
         <div style={{ marginBottom: 24 }}>
           <Title level={5}>公开访问链接</Title>
           {doc.visibility === 'public' ? (
@@ -613,11 +766,255 @@ export default function DocumentEditor() {
         <div>
           <Title level={5}>订阅更新通知</Title>
           <Paragraph type="secondary">订阅后，当文档内容更新时，您将收到邮件通知</Paragraph>
-          <Space.Compact style={{ width: '100%' }}>
-            <Input placeholder="输入您的邮箱" value={subscribeEmail} onChange={(e) => setSubscribeEmail(e.target.value)} />
-            <Button type="primary" onClick={handleSubscribe}>订阅</Button>
-          </Space.Compact>
+          <Form layout="vertical" onFinish={handleSubscribe}>
+            <Form.Item label="您的邮箱" required>
+              <Input placeholder="输入您的邮箱" value={subscribeEmail} onChange={(e) => setSubscribeEmail(e.target.value)} />
+            </Form.Item>
+            <Form.Item label="通知频率">
+              <Select
+                value={subscribeFrequency}
+                onChange={setSubscribeFrequency}
+                style={{ width: '100%' }}
+                options={[
+                  { value: 'instant', label: '实时 - 每次变更立即通知' },
+                  { value: 'daily', label: '每日汇总（每日最多一封）' },
+                  { value: 'weekly', label: '每周汇总（每周最多一封）' },
+                  { value: 'none', label: '仅订阅，暂不接收邮件' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">订阅</Button>
+            </Form.Item>
+          </Form>
         </div>
+      </Modal>
+
+      <Modal title="订阅管理" open={subscriptionOpen} onCancel={() => setSubscriptionOpen(false)} footer={null} width={720}>
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">当前共有 {subscriptions.length} 个订阅者</Text>
+        </div>
+        <Table
+          rowKey="id"
+          dataSource={subscriptions}
+          locale={{ emptyText: '暂无订阅' }}
+          pagination={false}
+          columns={[
+            { title: '邮箱', dataIndex: 'email', key: 'email' },
+            {
+              title: '通知频率', dataIndex: 'notify_frequency', key: 'notify_frequency', width: 220,
+              render: (v: string, r: any) => (
+                <Select
+                  size="small"
+                  value={v || 'instant'}
+                  onChange={(nv) => handleUpdateSubscriptionFreq(r.id, nv)}
+                  style={{ width: 180 }}
+                  options={[
+                    { value: 'instant', label: '实时' },
+                    { value: 'daily', label: '每日汇总' },
+                    { value: 'weekly', label: '每周汇总' },
+                    { value: 'none', label: '不通知' },
+                  ]}
+                />
+              ),
+            },
+            { title: '上次发送', dataIndex: 'last_sent_at', key: 'last_sent_at', width: 170, render: (v: string) => v ? dayjs(v).format('MM-DD HH:mm') : '未发送' },
+            {
+              title: '操作', key: 'action', width: 160,
+              render: (_: any, r: any) => (
+                <Space>
+                  <Button size="small" onClick={() => handleTestEmail(r.id)}>发送测试</Button>
+                  <Button size="small" danger onClick={() => handleDeleteSubscription(r.id)}>取消</Button>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </Modal>
+
+      <Modal title="协作者管理" open={collaboratorOpen} onCancel={() => setCollaboratorOpen(false)} footer={null} width={640}>
+        <div style={{ marginBottom: 16 }}>
+          <Title level={5}>邀请协作者</Title>
+          <Form layout="inline" onFinish={handleAddCollaborator}>
+            <Form.Item name="email" label="邮箱" rules={[{ required: true, type: 'email' }]}>
+              <Input placeholder="协作者邮箱" style={{ width: 240 }} />
+            </Form.Item>
+            <Form.Item name="role" label="角色" initialValue="viewer">
+              <Select style={{ width: 140 }} options={[
+                { value: 'viewer', label: '只读' },
+                { value: 'editor', label: '可编辑' },
+              ]} />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">邀请</Button>
+            </Form.Item>
+          </Form>
+        </div>
+        <Divider />
+        <div>
+          <Title level={5}>协作者列表</Title>
+          <Table
+            rowKey="id"
+            dataSource={collaborators}
+            pagination={false}
+            locale={{ emptyText: '暂无协作者' }}
+            columns={[
+              {
+                title: '成员', key: 'user',
+                render: (_: any, r: any) => (
+                  <Space>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#1677ff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>{r.user?.name?.[0] || 'U'}</div>
+                    <div>
+                      <div>{r.user?.name}</div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{r.user?.email}</Text>
+                    </div>
+                  </Space>
+                ),
+              },
+              {
+                title: '权限', dataIndex: 'role', key: 'role', width: 140,
+                render: (v: string, r: any) => (
+                  <Select
+                    size="small"
+                    value={v || 'viewer'}
+                    onChange={(nv) => handleUpdateCollaborator(r.id, nv)}
+                    options={[
+                      { value: 'viewer', label: '只读' },
+                      { value: 'editor', label: '可编辑' },
+                    ]}
+                  />
+                ),
+              },
+              { title: '加入时间', dataIndex: 'created_at', key: 'created_at', render: (v: string) => dayjs(v).format('YYYY-MM-DD') },
+              {
+                title: '操作', key: 'action', width: 80,
+                render: (_: any, r: any) => <Button size="small" danger onClick={() => handleDeleteCollaborator(r.id)}>移除</Button>,
+              },
+            ]}
+          />
+          <Paragraph type="secondary" style={{ marginTop: 16 }}>
+            提示：内部可见文档所有登录用户都能阅读；私有文档仅创建者和协作者可见。
+          </Paragraph>
+        </div>
+      </Modal>
+
+      <Modal title={`版本快照 - v${versionDetail?.version || ''}`} open={versionDetailOpen} onCancel={() => setVersionDetailOpen(false)} footer={null} width={780}>
+        {versionDetail ? (
+          <div>
+            <Space style={{ marginBottom: 16 }}>
+              <Text strong>创建者：</Text><Text>{versionDetail.user?.name}</Text>
+              <Text strong>时间：</Text><Text>{dayjs(versionDetail.created_at).format('YYYY-MM-DD HH:mm')}</Text>
+            </Space>
+            {versionDetail.change_summary && (
+              <Paragraph type="secondary">说明：{versionDetail.change_summary}</Paragraph>
+            )}
+            <Divider />
+            <Tabs
+              items={[
+                {
+                  key: 'modules',
+                  label: `模块 (${versionDetail.content?.modules?.length || 0})`,
+                  children: (
+                    <Table
+                      size="small"
+                      rowKey="id"
+                      dataSource={versionDetail.content?.modules || []}
+                      pagination={false}
+                      locale={{ emptyText: '无模块' }}
+                      columns={[
+                        { title: '模块名称', dataIndex: 'name', key: 'name' },
+                        { title: '描述', dataIndex: 'description', key: 'description' },
+                        { title: '排序', dataIndex: 'sort_order', key: 'sort_order', width: 80 },
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'endpoints',
+                  label: `接口 (${versionDetail.content?.endpoints?.length || 0})`,
+                  children: (
+                    <Table
+                      size="small"
+                      rowKey="id"
+                      dataSource={versionDetail.content?.endpoints || []}
+                      pagination={false}
+                      locale={{ emptyText: '无接口' }}
+                      columns={[
+                        { title: '方法', dataIndex: 'method', key: 'method', width: 80, render: (m: string) => <Tag color="blue">{m}</Tag> },
+                        { title: '路径', dataIndex: 'path', key: 'path' },
+                        { title: '名称', dataIndex: 'name', key: 'name' },
+                      ]}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </div>
+        ) : (
+          <div>加载中...</div>
+        )}
+      </Modal>
+
+      <Modal title="版本对比" open={diffOpen} onCancel={() => setDiffOpen(false)} footer={null} width={780}>
+        {diffData ? (
+          <div>
+            <Space style={{ marginBottom: 16 }}>
+              <Tag color="default">
+                {diffData.from ? `v${diffData.from.version} (${dayjs(diffData.from.created_at).format('MM-DD HH:mm')})` : '初始'}
+              </Tag>
+              <Text>→</Text>
+              <Tag color="blue">
+                v{diffData.to.version} ({dayjs(diffData.to.created_at).format('MM-DD HH:mm')})
+              </Tag>
+            </Space>
+            {diffData.diff && (
+              <div>
+                {(['addedModules', 'removedModules', 'changedModules', 'addedEndpoints', 'removedEndpoints', 'changedEndpoints'] as const).map((k) => {
+                  const items = diffData.diff[k] || [];
+                  if (!items.length) return null;
+                  const labelMap: Record<string, string> = {
+                    addedModules: '新增模块', removedModules: '删除模块', changedModules: '变更模块',
+                    addedEndpoints: '新增接口', removedEndpoints: '删除接口', changedEndpoints: '变更接口',
+                  };
+                  const colorMap: Record<string, string> = {
+                    addedModules: 'green', removedModules: 'red', changedModules: 'orange',
+                    addedEndpoints: 'green', removedEndpoints: 'red', changedEndpoints: 'orange',
+                  };
+                  return (
+                    <div key={k} style={{ marginBottom: 16 }}>
+                      <Title level={5}>
+                        <Tag color={colorMap[k]}>{labelMap[k]}</Tag>
+                        <Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>共 {items.length} 项</Text>
+                      </Title>
+                      <List
+                        size="small"
+                        bordered
+                        dataSource={items}
+                        locale={{ emptyText: '无' }}
+                        renderItem={(it: any) => (
+                          <List.Item>
+                            {it.method && <Tag style={{ marginRight: 8 }}>{it.method}</Tag>}
+                            <Text strong>{it.path || it.title}{it.title && it.path && <> ({it.title})</>}</Text>
+                            {it.changes && Array.isArray(it.changes) && (
+                              <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
+                                {it.changes.map((c: string, i: number) => <li key={i} style={{ fontSize: 12, color: '#666' }}>{c}</li>)}
+                              </ul>
+                            )}
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  );
+                })}
+                {!['addedModules', 'removedModules', 'changedModules', 'addedEndpoints', 'removedEndpoints', 'changedEndpoints'].some((k) => (diffData.diff[k] || []).length) && (
+                  <Paragraph type="secondary" style={{ textAlign: 'center', padding: 24 }}>无差异</Paragraph>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>加载中...</div>
+        )}
       </Modal>
     </Layout>
   );

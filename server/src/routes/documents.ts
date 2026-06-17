@@ -3,8 +3,17 @@ import { v4 as uuid } from 'uuid';
 import { db } from '../db';
 import { authMiddleware, optionalAuth, checkDocumentAccess, AuthRequest } from '../auth';
 import { serializeEndpointList } from '../utils';
+import { saveVersion, addChangelog, notifySubscribers } from './versions';
 
 const router = Router();
+
+function getNextVersion(docId: string): string {
+  const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
+  if (logs.length === 0) return '1.0.0';
+  const parts = (logs[0].version || '1.0.0').split('.').map(Number);
+  parts[2] = (parts[2] || 0) + 1;
+  return parts.join('.');
+}
 
 router.get('/', authMiddleware, (req: AuthRequest, res) => {
   const allDocs = db.prepare('SELECT * FROM documents ORDER BY updated_at DESC').all() as any[];
@@ -18,7 +27,7 @@ router.get('/', authMiddleware, (req: AuthRequest, res) => {
   res.json(visibleDocs);
 });
 
-router.post('/', authMiddleware, (req: AuthRequest, res) => {
+router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   const { title, description, base_url, visibility } = req.body;
   const id = uuid();
   db.prepare(`
@@ -26,7 +35,8 @@ router.post('/', authMiddleware, (req: AuthRequest, res) => {
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(id, title || '未命名文档', description || '', base_url || '', visibility || 'private', req.user!.id);
 
-  addChangelog(id, '1.0.0', ['创建文档']);
+  saveVersion(id, req.user!.id, '创建文档');
+  await addChangelog(id, req.user!.id, '1.0.0', ['创建文档']);
 
   const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(id);
   res.json(doc);
@@ -63,7 +73,7 @@ router.get('/:id', optionalAuth, (req: AuthRequest, res) => {
   res.json({ ...doc, modules, endpoints });
 });
 
-router.put('/:id', authMiddleware, (req: AuthRequest, res) => {
+router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
   if (!checkDocumentAccess(req.params.id, req.user!.id, true)) {
     return res.status(403).json({ error: '无权限编辑' });
   }
@@ -81,8 +91,9 @@ router.put('/:id', authMiddleware, (req: AuthRequest, res) => {
   if (oldDoc.visibility !== visibility) changes.push(`可见性改为「${visibility}」`);
 
   if (changes.length > 0) {
-    addChangelog(req.params.id, null, changes);
+    const version = getNextVersion(req.params.id);
     saveVersion(req.params.id, req.user!.id, changes.join('；'));
+    await addChangelog(req.params.id, req.user!.id, version, changes);
   }
 
   const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(req.params.id);
@@ -98,62 +109,4 @@ router.delete('/:id', authMiddleware, (req: AuthRequest, res) => {
   res.json({ success: true });
 });
 
-function saveVersion(docId: string, userId: string, summary: string) {
-  try {
-    const modules = db.prepare('SELECT * FROM modules WHERE document_id = ? ORDER BY sort_order').all(docId);
-    const endpoints = db.prepare('SELECT * FROM endpoints WHERE module_id IN (SELECT id FROM modules WHERE document_id = ?)').all(docId);
-    const maxVer = db.prepare('SELECT MAX(version) as max FROM document_versions WHERE document_id = ?').get(docId) as any;
-    const version = (maxVer?.max || 0) + 1;
-    const id = uuid();
-    db.prepare(`
-      INSERT INTO document_versions (id, document_id, version, content, change_summary, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, docId, version, JSON.stringify({ modules, endpoints }), summary, userId);
-  } catch (e) {
-    console.error('save version error:', e);
-  }
-}
-
-function addChangelog(docId: string, ver: string | null, changes: string[]) {
-  try {
-    const logs = db.prepare('SELECT * FROM changelogs WHERE document_id = ? ORDER BY created_at DESC').all(docId);
-    let version: string;
-    if (ver) {
-      version = ver;
-    } else if (logs.length > 0) {
-      const lastVer = logs[0].version.split('.').map(Number);
-      lastVer[2] = (lastVer[2] || 0) + 1;
-      version = lastVer.join('.');
-    } else {
-      version = '1.0.0';
-    }
-    const id = uuid();
-    db.prepare(`
-      INSERT INTO changelogs (id, document_id, version, changes) VALUES (?, ?, ?, ?)
-    `).run(id, docId, version, JSON.stringify(changes));
-
-    notifySubscribers(docId, version, changes);
-  } catch (e) {
-    console.error('add changelog error:', e);
-  }
-}
-
-function notifySubscribers(docId: string, version: string, changes: string[]) {
-  try {
-    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(docId) as any;
-    const subs = db.prepare('SELECT email FROM subscriptions WHERE document_id = ?').all(docId) as any[];
-    if (subs.length === 0 || !doc) return;
-
-    const subject = `【文档更新】${doc.title} v${version}`;
-    const text = `${doc.title} 有新的更新：\n\n${changes.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n---\n订阅了此文档的更新通知。`;
-
-    subs.forEach((s) => {
-      console.log(`[邮件通知] To: ${s.email}, Subject: ${subject}`);
-    });
-  } catch (e) {
-    console.error('notify error:', e);
-  }
-}
-
-export { saveVersion, addChangelog };
 export default router;

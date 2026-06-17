@@ -65,13 +65,31 @@ export const commentApi = {
 
 export const versionApi = {
   list: (docId: string) => api.get<DocumentVersion[]>(`/documents/${docId}/versions`).then((r) => r.data),
+  detail: (docId: string, versionId: string) => api.get(`/documents/${docId}/versions/${versionId}`).then((r) => r.data),
   create: (docId: string, data: { content: any; change_summary?: string }) =>
     api.post(`/documents/${docId}/versions`, data).then((r) => r.data),
+  diff: (docId: string, from?: string, to?: string) =>
+    api.get(`/documents/${docId}/diff`, { params: { from, to } }).then((r) => r.data),
   changelogList: (docId: string) => api.get<Changelog[]>(`/documents/${docId}/changelogs`).then((r) => r.data),
   changelogCreate: (docId: string, data: { version: string; changes: any }) =>
     api.post(`/documents/${docId}/changelogs`, data).then((r) => r.data),
-  subscribe: (docId: string, email: string) =>
-    api.post(`/documents/${docId}/subscribe`, { email }).then((r) => r.data),
+  subscribe: (docId: string, email: string, notify_frequency?: string) =>
+    api.post(`/documents/${docId}/subscribe`, { email, notify_frequency }).then((r) => r.data),
+  subscriptionList: (docId: string) => api.get(`/documents/${docId}/subscriptions`).then((r) => r.data),
+  subscriptionUpdate: (docId: string, id: string, notify_frequency: string) =>
+    api.patch(`/documents/${docId}/subscriptions/${id}`, { notify_frequency }).then((r) => r.data),
+  subscriptionDelete: (docId: string, id: string) =>
+    api.delete(`/documents/${docId}/subscriptions/${id}`).then((r) => r.data),
+  subscriptionTest: (docId: string, id: string) =>
+    api.post(`/documents/${docId}/subscriptions/${id}/test`).then((r) => r.data),
+  collaboratorList: (docId: string) => api.get(`/documents/${docId}/collaborators`).then((r) => r.data),
+  collaboratorAdd: (docId: string, email: string, role: string = 'viewer') =>
+    api.post(`/documents/${docId}/collaborators`, { email, role }).then((r) => r.data),
+  collaboratorUpdate: (docId: string, id: string, role: string) =>
+    api.patch(`/documents/${docId}/collaborators/${id}`, { role }).then((r) => r.data),
+  collaboratorDelete: (docId: string, id: string) =>
+    api.delete(`/documents/${docId}/collaborators/${id}`).then((r) => r.data),
+  permissions: (docId: string) => api.get(`/documents/${docId}/permissions`).then((r) => r.data),
 };
 
 export const toolApi = {
