@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "id": "15077ed3-42c8-41c3-ae0e-681f286b698f",
+      "email": "demo@example.com",
+      "password_hash": "$2a$10$pIdiUHCyk6Ya7QvJ4Ll.XOoCoPIwjWI4JA3Vrn7bBu28xC6EOrL0O",
+      "name": "Demo User",
+      "created_at": "2026-06-17T16:30:45.742Z"
+    }
+  ],
+  "documents": [],
+  "document_members": [],
+  "modules": [],
+  "endpoints": [],
+  "document_versions": [],
+  "comments": [],
+  "changelogs": [],
+  "subscriptions": []
+}

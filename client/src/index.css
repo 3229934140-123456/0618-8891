@@ -1,0 +1,77 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f0f2f5;
+}
+
+.code-block {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.doc-content {
+  line-height: 1.8;
+}
+
+.doc-content h2 {
+  margin: 24px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.doc-content h3 {
+  margin: 20px 0 12px;
+}
+
+.doc-content p {
+  margin-bottom: 12px;
+}
+
+.doc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.doc-content th,
+.doc-content td {
+  border: 1px solid #f0f0f0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.doc-content th {
+  background: #fafafa;
+}
+
+.http-method {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 56px;
+  text-align: center;
+}
+
+.http-GET { background: #52c41a; }
+.http-POST { background: #1890ff; }
+.http-PUT { background: #faad14; }
+.http-DELETE { background: #ff4d4f; }
+.http-PATCH { background: #722ed1; }
+.http-OPTIONS { background: #8c8c8c; }
+.http-HEAD { background: #8c8c8c; }
